@@ -1,2 +1,3 @@
 Radim Novotny, original author; 
 Petri Savolainen, contributor
+Tom Davis, contributor

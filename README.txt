@@ -64,6 +64,25 @@ Example 2::
  ignore = *.tmp
 
 
+For files in multiple directories
+---------------------------------
+
+If *symlink* & *symlink_target* are specified and *bulk* is *true*,
+links are created for all items found in all *symlink* directories.
+
+Example 3::
+
+ [symlinks]
+ symlink_target = ${buildout:directory}/${buildout:app-src}/lib
+ symlink =
+     ${buildout:directory}/lib
+     ${buildout:directory}/distlib
+     ${buildout:directory}/srclib
+ ignore = README*
+ autocreate = true
+ bulk = True
+
+
 For eggs in buildout
 ---------------------
 
@@ -74,7 +93,7 @@ There are two options to generate symlinks for eggs downloaded to a buildout.
 
 The *ignore option* can be used here as well.
 
-Example 3::
+Example 4::
 
  eggs = true
  develop = true

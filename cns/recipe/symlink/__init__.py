@@ -15,13 +15,11 @@ class Recipe:
         self.logger = logging.getLogger(name)
         self.buildout = buildout
 
-
     def install(self):
         "implement recipe API"
 
         if sys.platform.startswith('win'):
             raise RuntimeError('Symlinks are not supported on Windows.')
-
 
         #shortcuts
         buildout = self.buildout["buildout"]
@@ -43,8 +41,9 @@ class Recipe:
             if not os.path.isdir(symlink_base):
                raise RuntimeError("Source directory %s does not exist." % symlink_base)
 
-
         bulkitems = []
+        sourceitems = []
+
         if starget:
             starget = os.path.expanduser(starget)
             if not os.path.isdir(starget):
@@ -71,6 +70,13 @@ class Recipe:
             if symlink_base and (not source or bulk):
                 items = os.listdir(symlink_base)
                 bulkitems += [symlink_base + os.sep + item for item in items]
+            elif source and bulk:
+                for path in [item for item in source.split('\n') if item]:
+                    items = [path + os.sep + i for i in os.listdir(path)]
+                    sources = self.handle_sources([i+'=' for i in items],
+                                                  starget,
+                                                  symlink_base)
+                    bulkitems.extend([s[0] for s in sources])
 
             # remove those that are to be ignored
             lastpart = lambda bi: bi[bi.rfind(os.sep)+1:]
@@ -83,34 +89,9 @@ class Recipe:
 
             bulkitems = [(bi, starget + os.sep + lastpart(bi)) for bi in bulkitems]
 
-
-        sourceitems = []
         if source:
             items = [item for item in source.split('\n') if item]
-            for item in items:
-                # item is : source=target
-                parts = item.split('=')
-                if len(parts) == 1:
-                    source = parts[0].strip()
-                    target = starget # global target
-                else:
-                    source = parts[0].strip()
-                    target = parts[1].strip()
-                    if not target:
-                        # for example: SRCPROJ=
-                        target = starget
-                # expand ~ variable
-                source = os.path.expanduser(source)
-
-                # check if apply symlink base to this entry
-                if symlink_base and (os.path.abspath(source) != source):
-                    source = os.path.join(symlink_base, source)
-                    if os.path.isdir(target):
-                        # take last part of source and append it to target
-                        target = os.path.join(target, os.path.split(source)[-1])
-
-                sourceitems.append((source, target))
-
+            sourceitems.extend(self.handle_sources(items, starget, symlink_base))
 
         elif not starget and (symlink_base or eggs or develop):
             raise RuntimeError("Provide at least 'symlink', or 'symlink_target'" \
@@ -131,6 +112,34 @@ class Recipe:
         self.logger.debug(result)
         return result
 
+    def handle_sources(self, items, starget, symlink_base):
+        sourceitems = []
+
+        for item in items:
+            # item is : source=target
+            parts = item.split('=')
+            if len(parts) == 1:
+                source = parts[0].strip()
+                target = starget # global target
+            else:
+                source = parts[0].strip()
+                target = parts[1].strip()
+                if not target:
+                    # for example: SRCPROJ=
+                    target = starget
+            # expand ~ variable
+            source = os.path.expanduser(source)
+
+            # check if apply symlink base to this entry
+            if symlink_base and (os.path.abspath(source) != source):
+                source = os.path.join(symlink_base, source)
+                if os.path.isdir(target):
+                    # take last part of source and append it to target
+                    target = os.path.join(target, os.path.split(source)[-1])
+
+            sourceitems.append((source, target))
+
+        return sourceitems
 
 #    def update(self):
 #       "Implement recipe API. Just call install for lack of better job."
